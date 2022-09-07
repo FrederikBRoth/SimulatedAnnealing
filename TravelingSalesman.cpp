@@ -85,6 +85,7 @@ int main()
     std::vector<sf::CircleShape> shapes;
     std::vector<sf::Vertex> roads;
     shapes.reserve(cities.size());
+    roads.reserve(cities.size()*2);
 
     // Inits shapes for rendering
     CreateRouteShapes(cities, shapes, roads);
@@ -122,8 +123,7 @@ int main()
             roads.clear();
             Neighboorhood(cities);
             CreateRouteShapes(cities, shapes, roads);
-
-            Logger::Log("Fuck");
+            Logger::Log(TotalDistance(roads));
             // Substract the time consumed
             elapsed_time -= delta_time;
         }
