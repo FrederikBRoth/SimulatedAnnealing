@@ -86,18 +86,9 @@ int main()
     int size = 750;
     srand(time(0) ^ getpid());
     City::count = 0;
-    std::vector<City> cities = RandomizedCitySpread(20, size);
+    int cityCize = 100;
+    std::vector<City> cities = RandomizedCitySpread(cityCize, size);
     Logger::Log("Before Scrambling");
-    // for (City *city : cities)
-    // {
-    //     Logger::Log(city->point);
-    // }
-    // Logger::Log("After Scrambling");
-    // Neighboorhood(cities);
-    // for (City *city : cities)
-    // {
-    //     Logger::Log(city->point);
-    // }
 
     // Starts rendering window
     sf::RenderWindow window(sf::VideoMode(size, size), "SFML works!");
@@ -117,8 +108,12 @@ int main()
     // Update/Refresh frequency
     sf::Time delta_time = sf::milliseconds(50);
     double temp = 1000;
-    double cooling = 0.99;
+    double cooling = 0.90;
     // We have enough time to spawn½ a sprite. ( may be for several ? )
+    int stepCountMax = cityCize * 100;
+    int stepCount = 0;
+    int improvementCount = 0;
+    bool running = true;
     while (window.isOpen())
     {
         elapsed_time += r.restart();
@@ -133,36 +128,49 @@ int main()
         // {
         // Spawn your sprite
         // ...
-        shapes.clear();
-        roads.clear();
-        std::vector<City> altCities = Neighboorhood(cities);
-        double diff = TotalDistance(altCities) - TotalDistance(cities);
-        if (diff < 0.0 || AnnealFunction(diff, temp))
+        if (running)
         {
-            cities = altCities;
-            CreateRouteShapes(cities, shapes, roads);
-            window.clear();
-
-            window.draw(&roads[0], roads.size(), sf::Lines);
-            int index = 0;
-            for (sf::CircleShape shape : shapes)
+            shapes.clear();
+            roads.clear();
+            std::vector<City> altCities = Neighboorhood(cities);
+            double diff = TotalDistance(altCities) - TotalDistance(cities);
+            if (diff < 0.0 || AnnealFunction(diff, temp))
             {
-                sf::Text mytext;
-                mytext.setString(cities[index].name);
-                mytext.setFont(font);
-                mytext.setPosition(shape.getPosition());
-                Logger::Log(shape.getPosition().y);
-                window.draw(shape);
-                window.draw(mytext);
-                index++;
+
+                cities = altCities;
+                CreateRouteShapes(cities, shapes, roads);
+                window.clear();
+
+                window.draw(&roads[0], roads.size(), sf::Lines);
+                int index = 0;
+                for (sf::CircleShape shape : shapes)
+                {
+                    window.draw(shape);
+                    index++;
+                }
+                if (diff < 0.0)
+                {
+                    improvementCount++;
+                }
+                if (improvementCount > 9)
+                {
+                    temp *= cooling;
+                    improvementCount = 0;
+                    stepCount = -1;
+                }
+
+                window.display();
+            }
+            stepCount++;
+            if(stepCount > stepCountMax) {
+                Logger::Log("Found Solution");
+                running = false;
             }
 
-            window.display();
+            // Substract the time consumed
+            elapsed_time -= delta_time;
+            // }
         }
-        temp *= cooling;
-        // Substract the time consumed
-        elapsed_time -= delta_time;
-        // }
     }
 
     return 0;

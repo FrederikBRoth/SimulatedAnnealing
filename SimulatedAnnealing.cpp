@@ -14,30 +14,36 @@ public:
 
 std::vector<City> Neighboorhood(std::vector<City> cities)
 {
-
     std::vector<City> temp = cities;
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0, cities.size()); // uniform distribution between 0 and
 
-    int index1a = dis(gen);
-    int index2a = dis(gen);
-    int index1b = 0;
-    int index2b = 0;
-    if (dis(gen) < temp.size() / 2)
-    {
-        index1b = (index1a + 1) % temp.size();
-        index2b = (index2a + 1) % temp.size();
+    int index1 = dis(gen);
+    int index2 = dis(gen);
+    int biggest = index1 > index2 ? index1 : index2;
+    int smallest = index1 < index2 ? index1 : index2;
+    Logger::Log(biggest);
+    Logger::Log(smallest);
+    if(index1 == index2) {
+        return cities;
     }
-    else
+    std::vector<City> temptemp;
+    temptemp.reserve(cities.size());
+    for (int i = 0; i <= smallest; i++)
     {
-        index1b = (index1a - 1) % temp.size();
-        index2b = (index2a - 1) % temp.size();
+        temptemp.push_back(cities[i]);
+    }
+    for (int i = biggest; i > smallest; i--)
+    {
+        temptemp.push_back(cities[i]);
+    }
+    for (int i = biggest + 1; i < cities.size(); i++)
+    {
+        temptemp.push_back(cities[i]);
     }
 
-    std::swap(temp[index2b], temp[index1b]);
-
-    return temp;
+    return temptemp;
 }
 
 double TotalDistance(std::vector<City> &cities)
@@ -60,5 +66,5 @@ bool AnnealFunction(double diff, double temp)
 
     double chance = dis(gen);
 
-    return chance < exp(-(1 / temp * diff));
+    return chance < exp(-diff / temp);
 }
