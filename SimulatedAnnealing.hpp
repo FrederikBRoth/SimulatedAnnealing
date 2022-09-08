@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
+#include <random>
 #include "City.hpp"
 #include "math.h"
 #include "SFML/Graphics.hpp"
 
-void Neighboorhood(std::vector<City*> &cities);
-double TotalDistance(std::vector<sf::Vertex> &roads);
+std::vector<City> Neighboorhood(std::vector<City> cities);
+double TotalDistance(std::vector<City> &cities);
+bool AnnealFunction(double diff, double temp);

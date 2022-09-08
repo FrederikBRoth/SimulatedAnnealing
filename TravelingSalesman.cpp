@@ -5,6 +5,14 @@
 #include <SFML/Graphics.hpp>
 #include "SimulatedAnnealing.hpp"
 
+/*
+TODO:
+Add "Temp steps" in which it goes through different iterations of neighboors untill it finds a better one then decrease temp
+Add better Neighboor functions.
+
+
+*/
+
 std::ostream &operator<<(std::ostream &stream, Point &point)
 {
     stream << point.x << ", " << point.y;
@@ -22,16 +30,24 @@ public:
     {
         std::cout << message << std::endl;
     };
+    static void Log(double message)
+    {
+        std::cout << message << std::endl;
+    };
     static void Log(Point message)
     {
         std::cout << message << std::endl;
     };
+    static void Log(bool message)
+    {
+        std::cout << (message ? "true" : "false") << std::endl;
+    };
 };
 
-std::vector<City *> RandomizedCitySpread(int amount, int windowSize)
+std::vector<City> RandomizedCitySpread(int amount, int windowSize)
 {
     int size = windowSize - 20;
-    std::vector<City *> cities;
+    std::vector<City> cities;
     cities.reserve(amount);
     int x = 0;
     int y = 0;
@@ -40,32 +56,37 @@ std::vector<City *> RandomizedCitySpread(int amount, int windowSize)
     {
         x = -((rand() % size) + 10);
         y = -((rand() % size) + 10);
-        City *city = new City((name + std::to_string(i + 1)), {x, y});
+        City city = City((std::to_string(i + 1)), {x, y});
         cities.emplace_back(city);
     }
     return cities;
 }
 
-void CreateRouteShapes(std::vector<City *> cities, std::vector<sf::CircleShape> &shapes, std::vector<sf::Vertex> &roads)
+void CreateRouteShapes(std::vector<City> cities, std::vector<sf::CircleShape> &shapes, std::vector<sf::Vertex> &roads)
 {
 
     for (int i = 0; i < cities.size(); i++)
     {
         sf::CircleShape shape(2.f);
-        shape.setOrigin(sf::Vector2f((cities[i]->point.x) + 2, (cities[i]->point.y) + 2));
+        shape.setPosition(sf::Vector2f(-(cities[i].point.x), -(cities[i].point.y)));
         shape.setFillColor(sf::Color::Green);
         shapes.emplace_back(shape);
-        roads.push_back(sf::Vertex(sf::Vector2f(-(cities[i]->point.x), -(cities[i]->point.y)), sf::Color::Red));
-        roads.push_back(sf::Vertex(sf::Vector2f(-(cities[(i + 1) % cities.size()]->point.x), -(cities[(i + 1) % cities.size()]->point.y)), sf::Color::Red));
+        roads.push_back(sf::Vertex(sf::Vector2f(-(cities[i].point.x), -(cities[i].point.y)), sf::Color::Red));
+        roads.push_back(sf::Vertex(sf::Vector2f(-(cities[(i + 1) % cities.size()].point.x), -(cities[(i + 1) % cities.size()].point.y)), sf::Color::Red));
     }
 }
 
 int main()
 {
-    int size = 500;
+    sf::Font font;
+    if (!font.loadFromFile("arial.ttf"))
+    {
+        Logger::Log("Fuck");
+    }
+    int size = 750;
     srand(time(0) ^ getpid());
     City::count = 0;
-    std::vector<City *> cities = RandomizedCitySpread(20, size);
+    std::vector<City> cities = RandomizedCitySpread(20, size);
     Logger::Log("Before Scrambling");
     // for (City *city : cities)
     // {
@@ -85,7 +106,7 @@ int main()
     std::vector<sf::CircleShape> shapes;
     std::vector<sf::Vertex> roads;
     shapes.reserve(cities.size());
-    roads.reserve(cities.size()*2);
+    roads.reserve(cities.size() * 2);
 
     // Inits shapes for rendering
     CreateRouteShapes(cities, shapes, roads);
@@ -94,9 +115,10 @@ int main()
     sf::Clock r;
 
     // Update/Refresh frequency
-    sf::Time delta_time = sf::milliseconds(1500);
-
-    // We have enough time to spawn a sprite. ( may be for several ? )
+    sf::Time delta_time = sf::milliseconds(50);
+    double temp = 1000;
+    double cooling = 0.99;
+    // We have enough time to spawn½ a sprite. ( may be for several ? )
     while (window.isOpen())
     {
         elapsed_time += r.restart();
@@ -106,27 +128,41 @@ int main()
             if (event.type == sf::Event::Closed)
                 window.close();
         }
-        window.clear();
 
-        window.draw(&roads[0], roads.size(), sf::Lines);
-        for (sf::CircleShape shape : shapes)
+        // while (elapsed_time >= delta_time)
+        // {
+        // Spawn your sprite
+        // ...
+        shapes.clear();
+        roads.clear();
+        std::vector<City> altCities = Neighboorhood(cities);
+        double diff = TotalDistance(altCities) - TotalDistance(cities);
+        if (diff < 0.0 || AnnealFunction(diff, temp))
         {
-            window.draw(shape);
-        }
-        window.display();
-        while (elapsed_time >= delta_time)
-        {
-            // Spawn your sprite
-            // ...
-            window.clear();
-            shapes.clear();
-            roads.clear();
-            Neighboorhood(cities);
+            cities = altCities;
             CreateRouteShapes(cities, shapes, roads);
-            Logger::Log(TotalDistance(roads));
-            // Substract the time consumed
-            elapsed_time -= delta_time;
+            window.clear();
+
+            window.draw(&roads[0], roads.size(), sf::Lines);
+            int index = 0;
+            for (sf::CircleShape shape : shapes)
+            {
+                sf::Text mytext;
+                mytext.setString(cities[index].name);
+                mytext.setFont(font);
+                mytext.setPosition(shape.getPosition());
+                Logger::Log(shape.getPosition().y);
+                window.draw(shape);
+                window.draw(mytext);
+                index++;
+            }
+
+            window.display();
         }
+        temp *= cooling;
+        // Substract the time consumed
+        elapsed_time -= delta_time;
+        // }
     }
 
     return 0;
